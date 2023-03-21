@@ -1,2 +1,2 @@
 # rSpy-Maya
-Importer for fSpy files into Maya
+Import fSpy files into Maya

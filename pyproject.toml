@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fspy_maya"
+dynamic = ["version"]
+authors = [
+  { name="Nathaniel A", email="developer@3dcg.guru" },
+]
+description = "Import fSpy files into Maya"
+readme = "README.md"
+requires-python = ">=2.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Nathanieljla/fSpy-Maya"
+
+[tool.setuptools.dynamic]
+version = {attr = "fspy_maya.__version__"}
