@@ -14,6 +14,7 @@ PLUGIN_NAME = 'fSpy Importer'
 #https://download.autodesk.com/us/maya/2010help/API/class_m_fn_plugin.html#eb13e594951a71b750927ac44ddd4983
 #https://download.autodesk.com/us/maya/2010help/API/class_m_px_file_translator.html
 #C:\Program Files\Autodesk\Maya2023\devkit\devkitBase\devkit\plug-ins\python\api2
+#mklink (use this to stick your github project into a module, so you can develop from two different locations)
 
 class fSpy_Importer( maya.OpenMayaMPx.MPxFileTranslator ):
     def __init__(self):
@@ -71,10 +72,11 @@ class fSpy_Importer( maya.OpenMayaMPx.MPxFileTranslator ):
             raise
     
     
+    
+
 # creator
 def creator():
     return maya.OpenMayaMPx.asMPxPtr( fSpy_Importer() )
-
 
 # initialize the script plug-in
 def initializePlugin(mobject):
@@ -85,8 +87,6 @@ def initializePlugin(mobject):
     except:
         sys.stderr.write("Failed to register node:{0}".format(PLUGIN_NAME))
         raise
-
-
 
 # uninitialize the script plug-in
 def uninitializePlugin( mobject ):
