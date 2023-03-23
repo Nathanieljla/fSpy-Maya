@@ -44,7 +44,8 @@ class fSpy_Importer( maya.OpenMayaMPx.MPxFileTranslator ):
             shape = selected.getShape()
             if shape and shape.type() == 'camera':
                 cameras.append(selected)
-                
+         
+        #we can't handle more than one camera in our selection       
         if len(cameras) > 1:
             error_message =  "Only 0-1 cameras can be selected when importing a file"
             pm.confirmDialog( title='fSpy Import Error', message=error_message, button=['Okay'] )
@@ -56,8 +57,7 @@ class fSpy_Importer( maya.OpenMayaMPx.MPxFileTranslator ):
             except: 
                 camera_shape = pm.createNode('camera')
                 camera = camera_shape.getParent()
-                pm.general.rename(camera, CAMERA_NAME)
-            
+                pm.general.rename(camera, CAMERA_NAME)   
         else:
             camera = cameras[0]         
         
@@ -72,15 +72,13 @@ class fSpy_Importer( maya.OpenMayaMPx.MPxFileTranslator ):
             raise
     
     
-    
-
 # creator
 def creator():
     return maya.OpenMayaMPx.asMPxPtr( fSpy_Importer() )
 
 # initialize the script plug-in
 def initializePlugin(mobject):
-    plugin : maya.OpenMayaMPx.MFnPlugin = maya.OpenMayaMPx.MFnPlugin(mobject, "Autodesk", "1.0", "Any")
+    plugin = maya.OpenMayaMPx.MFnPlugin(mobject, "Autodesk", "1.0", "Any")
 
     try:
         plugin.registerFileTranslator(PLUGIN_NAME, '', creator)
@@ -90,7 +88,7 @@ def initializePlugin(mobject):
 
 # uninitialize the script plug-in
 def uninitializePlugin( mobject ):
-    plugin : maya.OpenMayaMPx.MFnPlugin = maya.OpenMayaMPx.MFnPlugin( mobject )
+    plugin = maya.OpenMayaMPx.MFnPlugin( mobject )
 
     try:
         plugin.deregisterFileTranslator(PLUGIN_NAME)
