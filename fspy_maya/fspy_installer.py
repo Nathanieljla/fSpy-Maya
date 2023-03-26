@@ -590,7 +590,6 @@ class Installer_UI(QWidget):
         self.set_default_size(name)
         self.install_button.clicked.connect(self.on_install)
         self.close_button.clicked.connect(self.on_close)
-        self.connect(self.module_manager, SIGNAL('finished()'), self.done)
 
     def set_default_size(self, name):
         size = [10, 10]
@@ -679,8 +678,8 @@ class Installer_UI(QWidget):
     
     def done(self):
         self.close_button.show()
-        self.animatedGif.hide()
-        self.waitLabel.hide()
+        self.animated_gif.hide()
+        self.wait_label.hide()
         
         self.module_manager.post_install()
     
@@ -710,7 +709,7 @@ class Custom_Installer(Module_manager):
         
     def install(self):
         """The main install function users should override"""        
-        time.sleep(10)
+        time.sleep(2)
     
     def post_install(self):
         """Used after install() to do any clean-up
