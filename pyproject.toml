@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fspy_maya"
-dynamic = ["version"]
+version = 0.9.0
 authors = [
   { name="Nathaniel A", email="developer@3dcg.guru" },
 ]
@@ -18,6 +18,3 @@ classifiers = [
 
 [project.urls]
 "Homepage" = "https://github.com/Nathanieljla/fSpy-Maya"
-
-[tool.setuptools.dynamic]
-version = {attr = "fspy_maya.__version__"}
