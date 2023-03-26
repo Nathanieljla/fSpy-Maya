@@ -138,11 +138,11 @@ class Module_manager(QThread):
         self.install_root = self.get_install_root()
         self.relative_module_path = self.get_relative_module_path()
         self.module_path = self.get_module_path()
-        self.icon_path = self.get_icon_path()
+        self.icons_path = self.get_icon_path()
         self.presets_path = self.get_presets_path()
         self.scripts_path = self.get_scripts_path()
         self.plugins_path = self.get_plugins_path()
-        self.site_package_path = self.get_site_package_path()
+        self.site_packages_path = self.get_site_package_path()
         self.package_install_path = self.get_package_install_path()
         
         #Non-Maya python and pip paths are needed for installing on linux (and OsX?)
@@ -222,7 +222,7 @@ class Module_manager(QThread):
         
         """
         root = self.module_name
-        if not self._version_specific:
+        if self._version_specific:
             root = os.path.join(self.module_name, 'platforms', str(self.maya_version),
                                 Platforms.get_name(self.platform),'x64')  
         return root
@@ -437,7 +437,7 @@ class Module_manager(QThread):
             true if the install can continue
         """        
         try:          
-            self.make_folder(self.modules_path)       
+            self.make_folder(self.module_path)       
             self.make_folder(self.icons_path)
             self.make_folder(self.presets_path)
             self.make_folder(self.scripts_path)
@@ -447,10 +447,10 @@ class Module_manager(QThread):
         except OSError:
             return False
 
-        filename = os.path.join(self.install_root, (self.MODULE_NAME + '.mod'))
+        filename = os.path.join(self.install_root, (self.module_name + '.mod'))
         self.read_module_definitions(filename)
               
-        return self.update_module_defition()
+        return self.update_module_definition(filename)
     
 
     def install(self):
@@ -701,15 +701,37 @@ class Installer_UI(QWidget):
 class Custom_Installer(Module_manager):
     def __init__(self, *args, **kwargs):
         super(Custom_Installer, self).__init__(*args, **kwargs)
+        
+    def get_repository(self):
+        dev_path = r'C:\Users\natha\Documents\github\fSpy-Maya'
+        if os.path.exists(dev_path):
+            return r'git+file:///{0}'.format(dev_path)
+        else:
+            return r'https://github.com/Nathanieljla/fSpy-Maya/archive/refs/heads/main.zip'
+        
+        
+    def get_install_args(self):
+        return []
+    
+    
+    def get_install_cmd(self):
+        cmd_str = r'{0}&show&{1}'.format(self.pip_path, self.get_repository())
+        #cmd_str = r'{0}&install&{1}&--target={2}'.format(self.pip_path, self.get_repository(), self.scripts_path)
+        
+        #for entry in self.get_install_args():
+            #cmd_str += r'&{0}'.format(entry)
+            
+        return cmd_str.split('&')
                
         
     def pre_install(self):
-        return super(Custom_Installer, self).get_package_install_path()
+        return super(Custom_Installer, self).pre_install()
         
         
     def install(self):
         """The main install function users should override"""        
-        time.sleep(2)
+        cmd = self.get_install_cmd()
+        self.run_shell_command(cmd, 'Installing fSpy')
     
     def post_install(self):
         """Used after install() to do any clean-up
