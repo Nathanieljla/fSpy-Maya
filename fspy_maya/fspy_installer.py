@@ -243,7 +243,7 @@ class Module_manager(QThread):
         return os.path.join(self.module_path, 'plug-ins')
     
     def get_site_package_path(self):
-        return os.path.join(self.module_path, 'site-package')
+        return os.path.join(self.scripts_path, 'site-packages')
     
     def get_package_install_path(self):
         return os.path.join(self.scripts_path, self.module_name)
@@ -703,11 +703,13 @@ class Custom_Installer(Module_manager):
         super(Custom_Installer, self).__init__(*args, **kwargs)
         
     def get_repository(self):
-        dev_path = r'C:\Users\natha\Documents\github\fSpy-Maya'
-        if os.path.exists(dev_path):
-            return r'git+file:///{0}'.format(dev_path)
-        else:
-            return r'https://github.com/Nathanieljla/fSpy-Maya/archive/refs/heads/main.zip'
+        return r'https://github.com/Nathanieljla/fSpy-Maya/archive/refs/heads/main.zip'
+        
+        #dev_path = r'C:\Users\natha\Documents\github\fSpy-Maya'
+        #if os.path.exists(dev_path):
+            #return r'git+file:///{0}'.format(dev_path)
+        #else:
+            #return r'https://github.com/Nathanieljla/fSpy-Maya/archive/refs/heads/main.zip'
         
         
     def get_install_args(self):
@@ -720,8 +722,13 @@ class Custom_Installer(Module_manager):
         
         #for entry in self.get_install_args():
             #cmd_str += r'&{0}'.format(entry)
-            
+        print(self.python_path)
+        print(cmd_str.replace('&', ' '))    
         return cmd_str.split('&')
+    
+    
+    def get_scripts_path(self):
+        return os.path.join(self.module_path, 'local_install')
                
         
     def pre_install(self):
