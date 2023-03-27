@@ -1,2 +1,2 @@
-# rSpy-Maya
+# fSpy-Maya
 Import fSpy files into Maya
