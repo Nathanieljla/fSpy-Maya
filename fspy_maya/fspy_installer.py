@@ -159,6 +159,51 @@ class Module_manager(QThread):
         self.wait()
         
         
+    def __ensure_pip_exists(self):
+        """Make sure OS level pip is installed
+        
+        """
+        if os.path.exists(self.pip_path):
+            print('Global PIP found')
+            return
+        
+        
+        tmpdir = tempfile.mkdtemp()
+        get_pip_path = os.path.join(tmpdir, 'get-pip.py')
+        print(get_pip_path)
+        
+        if self.platform == Platforms.OSX:
+            #cmd = 'curl https://bootstrap.pypa.io/pip/{0}/get-pip.py -o {1}'.format(pip_folder, pip_installer).split(' ')
+            cmd = 'curl https://bootstrap.pypa.io/pip/get-pip.py -o {0}'.format(get_pip_path).split(' ')
+            self.run_shell_command(cmd, 'get-pip')
+
+        else:
+            # this should be using secure https, but we should be fine for now
+            # as we are only reading data, but might be a possible mid attack
+            #response = urlopen('https://bootstrap.pypa.io/pip/{0}/get-pip.py'.format(pip_folder))
+            response = urlopen('https://bootstrap.pypa.io/pip/get-pip.py')
+            data = response.read()
+            
+            with open(get_pip_path, 'wb') as f:
+                f.write(data)
+                
+        # Install pip
+        # On Linux installing pip with Maya Python creates unwanted dependencies to Mayas Python version, so pip might not work 
+        # outside of Maya Python anymore. So lets install pip with the os python version. 
+        filepath, filename = os.path.split(get_pip_path)
+        #is this an insert, so this pip is found before any other ones?
+        sys.path.insert(0, filepath)
+        
+        
+        if self.platform == Platforms.OSX or self.platform == Platforms.LINUX:
+            python_str = 'python{0}.{1}'.format(self.max, self.min)
+        else:
+            python_str = self.python_path
+            
+        cmd = '{0}&{1}&--user&pip'.format(python_str, get_pip_path).split('&')
+        self.run_shell_command(cmd, 'install pip')  
+        
+        
     def __find_python_paths(self):      
         version_str = '{0}.{1}'.format(self.max, self.min)
         if self.platform == Platforms.WINDOWS:
@@ -442,13 +487,20 @@ class Module_manager(QThread):
         
         This function attempts to create the required install folders
         and update/add the .mod file. Sub-class should call this function
-        when Ov7779mzr
+        when overriding
 
         Returns:
         --------
         bool
             true if the install can continue
-        """        
+        """
+        try:
+            self.__ensure_pip_exists()
+            print('Global PIP is ready for use!')
+        except Exception as e:
+            print('failed to setup global pip {0}'.format(e))
+            return False
+        
         try:          
             self.make_folder(self.module_path)       
             self.make_folder(self.icons_path)
@@ -680,7 +732,7 @@ class Installer_UI(QWidget):
                 
     def on_install(self):
         self.install_button.hide()
-        #self.movie.start() #I'm thinking this causes maya to crash when debugging in WNIG
+        #self.movie.start() #I'm thinking this causes maya to crash when debugging in WING
         self.animated_gif.show()
         self.wait_label.show()
         
@@ -715,7 +767,7 @@ class Custom_Installer(Module_manager):
     def __init__(self, *args, **kwargs):
         super(Custom_Installer, self).__init__(*args, **kwargs)
         
-
+                
     @staticmethod
     def pip_install(pip_path, repo_name, pip_args = [], *args, **kwargs):
         cmd_str = ('{0}&install&{1}').format(pip_path, repo_name)
@@ -749,6 +801,9 @@ class Custom_Installer(Module_manager):
     def get_pip_show(self, *args, **kwargs):
         result = Custom_Installer.pip_show(self.pip_path, self.package_name, *args, **kwargs)
         return result
+    
+    
+
     
     
     def install_package(self):
@@ -832,6 +887,8 @@ class Custom_Installer(Module_manager):
     
     
     def get_remote_package(self):
+        """returns the get the github or PyPi name needed for installing"""
+        
         return r'https://github.com/Nathanieljla/fSpy-Maya/archive/refs/heads/main.zip'
         
         #dev_path = r'C:\Users\natha\Documents\github\fSpy-Maya'
@@ -842,11 +899,11 @@ class Custom_Installer(Module_manager):
     
     
 ##--------------move the above into Module_manager
-
-
-    def get_relative_module_path(self):
-        base = super(Custom_Installer, self).get_relative_module_path()
-        return os.path.join(base, 'local_install')
+            
+            
+    #def get_relative_module_path(self):
+        #base = super(Custom_Installer, self).get_relative_module_path()
+        #return os.path.join(base, 'local_install')
     
     #def get_scripts_path(self):
         #return os.path.join(self.module_path, 'local_install')
@@ -858,10 +915,27 @@ class Custom_Installer(Module_manager):
         
         
     def install(self):
-        """The main install function users should override"""
-        print('git version')
-        #self.install_package()
-        self.package_outdated()
+        """The main install function users should override
+        
+        Users must return True or False to indicate if the installation was a succcess        
+        """
+
+        installed = False
+        if not self.package_installed() or self.package_outdated():
+            #this might be a re-install, so lets try unloading the plug-in to be clean
+            try:                    
+                maya.cmds.unloadPlugin('fspy_plugin')
+            except Exception as e:
+                pass          
+            
+            try:
+                self.install_package()
+                installed = True
+            except:
+                pass
+            
+        return installed
+            
 
     
     def post_install(self):
@@ -869,13 +943,42 @@ class Custom_Installer(Module_manager):
 
         """  
         print('post install')
-        if self.install_succeeded and self.scripts_path not in sys.path:
-            sys.path.append(self.scripts_path)
-            print('Add scripts path [{}] to system paths'.format(self.scripts_path))
+        if self.install_succeeded:
+            #lets get our script and plug-ins useable so we don't have to restart Maya
+            if self.scripts_path not in sys.path:
+                sys.path.append(self.scripts_path)
+                print('Add scripts path [{}] to system paths'.format(self.scripts_path))
+            else:
+                print('scripts path in system paths')
+                
+                
+            #Let's get our plug-in loaded!
+            fromSource = os.path.join(self.package_install_path, 'fspy_plugin.py')
+            toTarget = os.path.join(self.plugins_path, 'fspy_plugin.py')
+            print('Copy From : {} to: {}'.format(fromSource, toTarget))
+            plugin_copied = False
+            try:
+                shutil.copy(fromSource, toTarget)
+                plugin_copied = True
+            except Exception as e:
+                print('copying plug-in failed')
+               
+            if plugin_copied:
+                #Load Plugin And Autoload it
+                if self.plugins_path not in os.environ['MAYA_PLUG_IN_PATH']:
+                    print('plug-in dir:{0}'.format(self.plugins_path))
+                    os.environ['MAYA_PLUG_IN_PATH'] += r';{0}'.format(self.plugins_path)
+                
+                try:
+                    maya.cmds.loadPlugin('fspy_plugin')
+                    maya.cmds.pluginInfo('fspy_plugin',  edit=True, autoload=True)
+                except Exception as e:
+                    print('FAILED to load plug-in:{0}'.format(e))
+                
         else:
-            print('scripts path in system paths')
-            
-        #self.get_pip_list()
+            #install failed so do alternative cleanup
+            pass
+        
         
         
     
