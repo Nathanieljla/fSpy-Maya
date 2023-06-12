@@ -1,7 +1,6 @@
 # fSpy-Maya
 Import fSpy files into Maya.
 
-Note: This plug-in requires [pymel](https://pypi.org/project/pymel/), which isn't installed by this tool (at the moment)
 # Installation
 
 ### Drag & Drop
