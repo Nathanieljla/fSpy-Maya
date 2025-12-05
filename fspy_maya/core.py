@@ -1,6 +1,8 @@
 import math
 import os
 import imghdr
+import copy
+
 from struct import *
 
 import pymel.core as pm
@@ -8,32 +10,10 @@ import pymel.core as pm
 from fspy_maya import fspy
 
 
-def set_camera(project, camera : pm.nodetypes.Transform):
-    def _convert_rows(rows):
-        x, y, z, =  rows[0], rows[1], rows[2]
-        output = [
-            [x[0], x[1], x[2], x[3]], 
-            [z[0], z[1], z[2], z[3]], 
-            [-y[0], -y[1], -y[2], -y[3]],
-            [0, 0, 0, 1] 
-        ]
-        
-        return output
-    
-    params = project.camera_parameters
-    
-    #set Rotation
-    camera_matrix = pm.datatypes.Matrix(_convert_rows(params.camera_transfrom))
-    camera.rotateOrder.set(0)
-    camera.setTransformation(camera_matrix)
-    camera.rotateOrder.set(3)
-    camera.scale.set([100, 100, 100])
-    
-    #set translation
-    x, y, z = params.camera_transfrom[0][3], params.camera_transfrom[2][3], params.camera_transfrom[1][3]    
-    scale_length = 1
 
-    unit =  project.reference_distance_unit
+def set_camera(project, camera : pm.nodetypes.Transform):
+    scale_length = 1
+    unit = project.reference_distance_unit
     if unit == 'Millimeters':
         scale_length = 0.1
     elif unit == 'Meters':
@@ -46,11 +26,53 @@ def set_camera(project, camera : pm.nodetypes.Transform):
         scale_length = 30.48
     elif unit == 'Miles':
         scale_length = 160900.0
-   
-    camera.setTranslation(pm.datatypes.Vector(x * scale_length, y * scale_length, -z * scale_length))
+        
+        
+    params = project.camera_parameters
+    transform_rows = params.camera_transform
+    
+    for row in transform_rows:
+        for idx in range(0, len(row)):
+            row[idx] = row[idx] * scale_length
+
+    #TODO: Add logic that considers Maya's up-axis
+    if project.z_up:
+        y, z = copy.copy(transform_rows[1]), copy.copy(transform_rows[2])
+
+        #Y gets Z rotation axis
+        transform_rows[1] = z
+     
+        #z -y
+        transform_rows[2][0] = -y[0]
+        transform_rows[2][1] = -y[1]
+        transform_rows[2][2] = -y[2]
+        transform_rows[2][3] = -y[3]
+
+
+    # Creating a camera, 4x4 matrix and decompose-matrix, then setting up the connections.
+    #modified from https://github.com/JustinPedersen/maya_fspy    
+    matrix_rows = [['in00', 'in10', 'in20', 'in30'],
+                      ['in01', 'in11', 'in21', 'in31'],
+                      ['in02', 'in12', 'in22', 'in32'],
+                      ['in03', 'in13', 'in23', 'in33']]
+
+    matrix = pm.createNode('fourByFourMatrix', n='cameraTransform_fourByFourMatrix')
+    decompose_matrix = pm.createNode('decomposeMatrix', n='cameraTransform_decomposeMatrix')
+    pm.connectAttr(matrix.output, decompose_matrix.inputMatrix)
+    pm.connectAttr(decompose_matrix.outputTranslate, camera.translate)
+    pm.connectAttr(decompose_matrix.outputRotate, camera.rotate)
+
+    # Setting the matrix attrs onto the 4x4 matrix.
+    for i, matrix_list in enumerate(transform_rows):
+        for value, attr in zip(matrix_list, matrix_rows[i]):
+            pm.setAttr(matrix.attr(attr), value)
+            
+    pm.delete([matrix, decompose_matrix])
+    #end https://github.com/JustinPedersen/maya_fspy
+    
     
     #set camera properties
-    camera_shape : pm.nodetypes.Camera = camera.getShape()
+    camera_shape: pm.nodetypes.Camera = camera.getShape()
     
     aspect_ratio = params.image_width / params.image_height 
     horizontal_aperture =  camera_shape.getHorizontalFilmAperture()

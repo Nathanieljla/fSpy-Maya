@@ -32,7 +32,7 @@ class CameraParameters:
         self.principal_point = (principal_point_dict["x"], principal_point_dict["y"])
         self.fov_horiz = json_dict["horizontalFieldOfView"]
         self.fov_vertical = json_dict["verticalFieldOfView"]
-        self.camera_transfrom = json_dict["cameraTransform"]["rows"]
+        self.camera_transform = json_dict["cameraTransform"]["rows"]
         self.image_width = json_dict["imageWidth"]
         self.image_height = json_dict["imageHeight"]
 
@@ -60,3 +60,4 @@ class Project:
         self.reference_distance_unit = calibration_settings["referenceDistanceUnit"]
         self.image_data = project_file.read(image_buffer_size)
         self.file_name = os.path.basename(project_path)
+        self.z_up = state['globalSettings']['overlay3DGuide'].lower().find('y') >= 0
